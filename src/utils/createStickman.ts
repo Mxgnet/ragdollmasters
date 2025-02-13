@@ -24,7 +24,14 @@ function createStick(_options: BodyPartOptions) {
     0,
     0,
     (x: number, y: number) => {
-      return Matter.Bodies.circle(x, y, radius, options);
+      return Matter.Bodies.circle(x, y, radius, {
+        ...options,
+        render: {
+          ...options?.render,
+          lineWidth: 0,
+          strokeStyle: 'transparent'
+        }
+      });
     }
   );
 
@@ -36,6 +43,12 @@ function createStick(_options: BodyPartOptions) {
       bodyB,
       damping: 0,
       stiffness: 1,
+      render: {
+        visible: false,
+        type: 'line',
+        anchors: false,
+        lineWidth: 0
+      }
     }))
     .flatMap((common) => [
       Matter.Constraint.create({
@@ -48,6 +61,12 @@ function createStick(_options: BodyPartOptions) {
         damping: 0,
         length: 0,
         stiffness: 0.5,
+        render: {
+          visible: false,
+          type: 'line',
+          anchors: false,
+          lineWidth: 0
+        }
       }),
     ]);
 
@@ -64,7 +83,14 @@ function createBody(_options: BodyPartOptions) {
     0,
     0,
     (x: number, y: number) => {
-      return Matter.Bodies.circle(x, y, radius, options);
+      return Matter.Bodies.circle(x, y, radius, {
+        ...options,
+        render: {
+          ...options?.render,
+          lineWidth: 0,
+          strokeStyle: 'transparent'
+        }
+      });
     }
   );
   const constraints = Array.from(bodies.entries())
@@ -75,6 +101,12 @@ function createBody(_options: BodyPartOptions) {
       bodyB,
       damping: 0,
       stiffness: 1,
+      render: {
+        visible: false,
+        type: 'line',
+        anchors: false,
+        lineWidth: 0
+      }
     }))
     .flatMap((common) => [
       Matter.Constraint.create({
@@ -87,17 +119,13 @@ function createBody(_options: BodyPartOptions) {
         damping: 0,
         length: 0,
         stiffness: 0.5,
+        render: {
+          visible: false,
+          type: 'line',
+          anchors: false,
+          lineWidth: 0
+        }
       }),
-      // Matter.Constraint.create({
-      //   ...common,
-      //   pointA: { x: 0, y: radius },
-      //   pointB: { x: 0, y: -radius },
-      // }),
-      // Matter.Constraint.create({
-      //   ...common,
-      //   pointA: { x: 0, y: -radius },
-      //   pointB: { x: 0, y: radius },
-      // }),
     ]);
   return { bodies, constraints };
 }
@@ -113,8 +141,19 @@ export function createStickman(
 ): Matter.Composite {
   const { scale, render } = defaults(options ?? ({} as any), {
     scale: 1,
-    render: {},
+    render: {
+      lineWidth: 0,
+      strokeStyle: 'transparent'
+    },
   });
+
+  // Helper function to create consistent constraint render options
+  const constraintRenderOptions = {
+    visible: false,
+    type: 'line' as const,
+    anchors: false,
+    lineWidth: 0
+  };
 
   const radius = 10 * scale;
   const flex = 1 / 10_000;
@@ -162,11 +201,13 @@ export function createStickman(
       pointB: { x: 0, y: -radius },
       stiffness: 1,
       damping: 0,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: chest.bodies.at(-1),
       bodyB: chest.bodies.at(0),
       stiffness: 1 / 1_000,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -201,6 +242,7 @@ export function createStickman(
       bodyB: chest.bodies.at(0),
       stiffness: 1,
       damping: 0,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperLeftArm.bodies.at(-1),
@@ -210,6 +252,7 @@ export function createStickman(
       damping: 0,
       length: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -235,12 +278,14 @@ export function createStickman(
       bodyB: lowerLeftArm.bodies.at(0),
       damping: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperLeftArm.bodies.at(-1),
       bodyB: lowerLeftArm.bodies.at(-1),
       damping: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperLeftArm.bodies.at(0),
@@ -250,6 +295,7 @@ export function createStickman(
       damping: 0,
       length: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -282,6 +328,7 @@ export function createStickman(
       bodyB: chest.bodies.at(0),
       damping: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: chest.bodies.at(0),
@@ -291,6 +338,7 @@ export function createStickman(
       damping: 0,
       length: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -317,12 +365,14 @@ export function createStickman(
       bodyB: lowerRightArm.bodies.at(0),
       damping: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperRightArm.bodies.at(-1),
       bodyB: lowerRightArm.bodies.at(-1),
       damping: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperRightArm.bodies.at(-1),
@@ -332,6 +382,7 @@ export function createStickman(
       damping: 0,
       length: 0,
       stiffness: 1,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -342,15 +393,13 @@ export function createStickman(
       bodyA: head,
       bodyB: upperRightArm.bodies.at(0),
       stiffness: flex,
-      // damping: 0,
-      // length: radius * 8,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: head,
       bodyB: upperLeftArm.bodies.at(-1),
       stiffness: flex,
-      // damping: 0,
-      // length: radius * 8,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -386,12 +435,14 @@ export function createStickman(
       stiffness: 1,
       damping: 0,
       length: 0,
+      render: constraintRenderOptions
     }),
 
     Matter.Constraint.create({
       bodyA: chest.bodies.at(-1),
       bodyB: upperLeftLeg.bodies.at(-1),
       stiffness: 0.5,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -415,12 +466,14 @@ export function createStickman(
     Matter.Constraint.create({
       bodyA: upperLeftLeg.bodies.at(0),
       bodyB: lowerLeftLeg.bodies.at(-1),
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperLeftLeg.bodies.at(0),
       bodyB: lowerLeftLeg.bodies.at(-1),
       stiffness: 1 / 1_000,
       damping: 0,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperLeftLeg.bodies.at(0),
@@ -430,6 +483,7 @@ export function createStickman(
       stiffness: 1 / 100,
       damping: 0,
       length: 0,
+      render: constraintRenderOptions
     }),
   ];
   //#endregion
@@ -460,6 +514,7 @@ export function createStickman(
       stiffness: 0.5,
       damping: 0,
       length: 0,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -483,12 +538,14 @@ export function createStickman(
     Matter.Constraint.create({
       bodyA: upperRightLeg.bodies.at(0),
       bodyB: lowerRightLeg.bodies.at(0),
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperRightLeg.bodies.at(-1),
       bodyB: lowerRightLeg.bodies.at(0),
       stiffness: 1 / 1_000,
       damping: 0,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperRightLeg.bodies.at(-1),
@@ -498,6 +555,7 @@ export function createStickman(
       stiffness: 1 / 100,
       damping: 0,
       length: 0,
+      render: constraintRenderOptions
     }),
   ];
 
@@ -512,6 +570,7 @@ export function createStickman(
       stiffness: 1,
       damping: 0,
       length: 0,
+      render: constraintRenderOptions
     }),
     Matter.Constraint.create({
       bodyA: upperRightLeg.bodies.at(1),
@@ -519,6 +578,7 @@ export function createStickman(
       stiffness: 1 / 10_000,
       damping: 1 / 1_000,
       length: radius,
+      render: constraintRenderOptions
     }),
   ];
 
