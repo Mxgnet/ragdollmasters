@@ -12,10 +12,14 @@ interface BodyPartOptions {
   length?: number;
   options?: Matter.IBodyDefinition;
   constraint?: Matter.IConstraintDefinition;
+  sprite?: {
+    src: string;
+    scale?: number;
+  };
 }
 
 function createStick(_options: BodyPartOptions) {
-  const { x, y, radius, length = 2, constraint, options } = _options;
+  const { x, y, radius, length = 2, constraint, options, sprite } = _options;
   const { bodies } = Matter.Composites.stack(
     x,
     y,
@@ -29,7 +33,12 @@ function createStick(_options: BodyPartOptions) {
         render: {
           ...options?.render,
           lineWidth: 0,
-          strokeStyle: 'transparent'
+          strokeStyle: 'transparent',
+          sprite: sprite ? {
+            texture: sprite.src,
+            xScale: sprite.scale ?? 1,
+            yScale: sprite.scale ?? 1
+          } : undefined
         }
       });
     }
@@ -130,6 +139,16 @@ function createBody(_options: BodyPartOptions) {
   return { bodies, constraints };
 }
 
+// Add debug visualization options
+interface DebugRenderOptions {
+  showJoints?: boolean;
+  showConstraints?: boolean;
+  showVelocity?: boolean;
+  showCollisions?: boolean;
+  showLabels?: boolean;
+  showTree?: boolean;
+}
+
 export function createStickman(
   x: number,
   y: number,
@@ -137,6 +156,7 @@ export function createStickman(
     scale: number;
     render: Matter.IBodyRenderOptions;
     bodyDef: Matter.IBodyDefinition;
+    debug?: DebugRenderOptions; // Add debug options
   }>
 ): Matter.Composite {
   const { scale, render } = defaults(options ?? ({} as any), {
@@ -149,10 +169,11 @@ export function createStickman(
 
   // Helper function to create consistent constraint render options
   const constraintRenderOptions = {
-    visible: false,
+    visible: options?.debug?.showConstraints ?? false,
     type: 'line' as const,
-    anchors: false,
-    lineWidth: 0
+    anchors: options?.debug?.showJoints ?? false,
+    lineWidth: options?.debug?.showConstraints ? 1 : 0,
+    showLabels: options?.debug?.showLabels ?? false
   };
 
   const radius = 10 * scale;
