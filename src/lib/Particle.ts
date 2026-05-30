@@ -1,5 +1,13 @@
 import Matter, { Body } from "matter-js";
 
+const spriteRender = {
+  texture: "",
+  xScale: 1,
+  yScale: 1,
+  xOffset: 0,
+  yOffset: 0,
+};
+
 export class Particle {
   body: Body;
   life = 1;
@@ -9,7 +17,7 @@ export class Particle {
       restitution: 0.5,
       frictionAir: 0.001,
       density: 0.001,
-      render: { fillStyle: "#f00", opacity: 1 },
+      render: { fillStyle: "#f00", opacity: 1, sprite: spriteRender },
       collisionFilter: { category: 0 },
     });
   }

@@ -1,5 +1,6 @@
 //
 
+import type { GameSettings } from "@/GameContext";
 import { useEventBeforeUpdate } from "@1.framework/matter4react";
 import debug from "debug";
 import { Body, Engine, Vector, type IEventTimestamped } from "matter-js";
@@ -18,7 +19,8 @@ const SPEED = 15;
 
 export function useAIMoves(
   headRef: MutableRefObject<Body | undefined>,
-  playerRef: MutableRefObject<Body | undefined>
+  playerRef: MutableRefObject<Body | undefined>,
+  settings?: number | GameSettings
 ) {
   useEventBeforeUpdate(
     (event: IEventTimestamped<Engine>) => {
@@ -30,8 +32,8 @@ export function useAIMoves(
         Vector.sub(head.position, player.position)
       );
 
-      moveBody(head)(event, direction, SPEED);
+      moveBody(head, settings)(event, direction, SPEED);
     },
-    [headRef.current, playerRef.current]
+    [headRef.current, playerRef.current, settings]
   );
 }

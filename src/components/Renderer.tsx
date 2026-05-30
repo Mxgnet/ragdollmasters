@@ -49,6 +49,7 @@ export function Renderer({
 
     options: {
       background: "#111",
+      hasBounds: true,
 
       // hasBounds: true,
       // showSleeping: true,

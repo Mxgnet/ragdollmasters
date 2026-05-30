@@ -4,6 +4,7 @@ import debug from "debug";
 import { Bodies } from "matter-js";
 import { forwardRef } from "react";
 import { Composite } from "./Composite";
+import { normalizeBodyOptions } from "./normalizeBodyOptions";
 
 //
 
@@ -14,7 +15,13 @@ const log = debug("@1.framework:matter4react:Rectangle");
 export const Rectangle = forwardRef<BodiesRectangleReturnType, Props>(
   function Rectangle({ x, y, width, height, options }, ref) {
     log("!", { x, y, width, height, options });
-    const object = Bodies.rectangle(x, y, width, height, options);
+    const object = Bodies.rectangle(
+      x,
+      y,
+      width,
+      height,
+      normalizeBodyOptions(options)
+    );
     return <Composite.add object={object} ref={ref} />;
   }
 );

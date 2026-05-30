@@ -22,7 +22,7 @@ export function Battle1Player({
   useKeyPressEvent("Escape", sendN("BACK"));
 
   return (
-    <section className="h-100% overflow-hidden grid items-center justify-center">
+    <section className="relative h-100% overflow-hidden grid items-center justify-center">
       <Renderer>
         <LeveL1 />
       </Renderer>

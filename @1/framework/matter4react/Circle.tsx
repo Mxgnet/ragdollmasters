@@ -4,6 +4,7 @@ import debug from "debug";
 import { Bodies } from "matter-js";
 import { forwardRef, useMemo, useRef } from "react";
 import { Composite } from "./Composite";
+import { normalizeBodyOptions } from "./normalizeBodyOptions";
 
 //
 
@@ -18,7 +19,7 @@ export const Circle = forwardRef<BodiesCircleReturnType, Props>(function Circle(
   log("! render", options?.label);
   const optionsRef = useRef(options);
   const object = useMemo(
-    () => Bodies.circle(x, y, radius, options),
+    () => Bodies.circle(x, y, radius, normalizeBodyOptions(options)),
     [x, y, radius, optionsRef.current]
   );
 

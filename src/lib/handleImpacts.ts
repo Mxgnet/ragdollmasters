@@ -18,7 +18,8 @@ export const log = debug("@:lib:useImpactHandler");
 
 type ImpactStrengthPair = [Body, number, Vector];
 const SPEED = -30;
-const TIMESCALE_LIMIT = 0.22;
+const SLOWMO_DURATION_MS = 300;
+const SLOWMO_TIMESCALE = 0.82;
 
 export function useImpactHandler(
   composites: Composite[],
@@ -27,6 +28,7 @@ export function useImpactHandler(
   log("!");
   const body_colors_ref = useRef(new Map<number, string>());
   const impactedBody = useRef<ImpactStrengthPair[]>([]);
+  const slowmoUntilRef = useRef(0);
 
   useStickmanCollision(
     composites,
@@ -62,6 +64,7 @@ export function useImpactHandler(
           1,
           Vector.mult(Vector.neg(impulse), 10 * bodyA.mass),
         ]);
+        slowmoUntilRef.current = event.source.timing.timestamp + SLOWMO_DURATION_MS;
       },
     },
     deps
@@ -112,17 +115,18 @@ export function useImpactHandler(
 
     //
 
-    if (!nextImpactedBody.length && event.source.timing.timeScale < 0.66) {
-      event.source.timing.timeScale = 1;
-    } else if (nextImpactedBody.length) {
+    if (
+      event.source.timing.timestamp < slowmoUntilRef.current &&
+      nextImpactedBody.length
+    ) {
       const lastImpact = nextImpactedBody.at(-1);
       const [, ratio] = lastImpact || [null, 0];
-
-      // slow motion effect
       event.source.timing.timeScale = Math.min(
         1,
-        Math.max(TIMESCALE_LIMIT, cubicIn(1 - ratio * ratio))
+        Math.max(SLOWMO_TIMESCALE, cubicIn(1 - ratio * ratio))
       );
+    } else if (event.source.timing.timeScale < 1) {
+      event.source.timing.timeScale = 1;
     }
     //
 

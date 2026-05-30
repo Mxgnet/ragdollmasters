@@ -5,6 +5,34 @@ import Matter from "matter-js";
 
 //
 
+const defaultSprite: Matter.IBodyRenderOptions["sprite"] = {
+  texture: "",
+  xScale: 1,
+  yScale: 1,
+  xOffset: 0,
+  yOffset: 0,
+};
+
+function withSafeRender(
+  render?: Matter.IBodyRenderOptions,
+  sprite?: BodyPartOptions["sprite"]
+): Matter.IBodyRenderOptions {
+  return {
+    ...render,
+    sprite: sprite
+      ? {
+          ...defaultSprite,
+          texture: sprite.src,
+          xScale: sprite.scale ?? 1,
+          yScale: sprite.scale ?? 1,
+        }
+      : {
+          ...defaultSprite,
+          ...render?.sprite,
+        },
+  };
+}
+
 interface BodyPartOptions {
   x: number;
   y: number;
@@ -31,15 +59,10 @@ function createStick(_options: BodyPartOptions) {
       return Matter.Bodies.circle(x, y, radius, {
         ...options,
         render: {
-          ...options?.render,
+          ...withSafeRender(options?.render, sprite),
           lineWidth: 0,
-          strokeStyle: 'transparent',
-          sprite: sprite ? {
-            texture: sprite.src,
-            xScale: sprite.scale ?? 1,
-            yScale: sprite.scale ?? 1
-          } : undefined
-        }
+          strokeStyle: "transparent",
+        },
       });
     }
   );
@@ -95,10 +118,10 @@ function createBody(_options: BodyPartOptions) {
       return Matter.Bodies.circle(x, y, radius, {
         ...options,
         render: {
-          ...options?.render,
+          ...withSafeRender(options?.render),
           lineWidth: 0,
-          strokeStyle: 'transparent'
-        }
+          strokeStyle: "transparent",
+        },
       });
     }
   );
@@ -163,9 +186,10 @@ export function createStickman(
     scale: 1,
     render: {
       lineWidth: 0,
-      strokeStyle: 'transparent'
+      strokeStyle: "transparent",
     },
   });
+  const bodyRender = withSafeRender(render);
 
   // Helper function to create consistent constraint render options
   const constraintRenderOptions = {
@@ -189,7 +213,7 @@ export function createStickman(
     collisionFilter: {
       group: head_group,
     },
-    render,
+    render: bodyRender,
     restitution: 0,
   });
 
@@ -208,7 +232,7 @@ export function createStickman(
       collisionFilter: {
         group: Matter.Body.nextGroup(true),
       },
-      render,
+      render: bodyRender,
     },
     constraint: { stiffness: 1, damping: 0 },
   });
@@ -252,7 +276,7 @@ export function createStickman(
       collisionFilter: {
         group: arm_group,
       },
-      render,
+      render: bodyRender,
       restitution: 0,
     },
   });
@@ -286,7 +310,7 @@ export function createStickman(
     radius: radius,
     options: {
       label: "Lower Left Arm",
-      render,
+      render: bodyRender,
       collisionFilter: {
         group: arm_group,
       },
@@ -337,7 +361,7 @@ export function createStickman(
       collisionFilter: {
         group: arm_group,
       },
-      render,
+      render: bodyRender,
       friction: 1,
       restitution: 0,
     },
@@ -375,8 +399,7 @@ export function createStickman(
       collisionFilter: {
         group: arm_group,
       },
-
-      render,
+      render: bodyRender,
     },
   });
 
@@ -442,7 +465,7 @@ export function createStickman(
       collisionFilter: {
         group: leg_group,
       },
-      render,
+      render: bodyRender,
       restitution: 0,
     },
   });
@@ -479,7 +502,7 @@ export function createStickman(
       collisionFilter: {
         group: Matter.Body.nextGroup(true),
       },
-      render,
+      render: bodyRender,
     },
   });
 
@@ -521,7 +544,7 @@ export function createStickman(
       collisionFilter: {
         group: leg_group,
       },
-      render,
+      render: bodyRender,
       restitution: 0,
     },
   });
@@ -551,7 +574,7 @@ export function createStickman(
       collisionFilter: {
         group: Matter.Body.nextGroup(true),
       },
-      render,
+      render: bodyRender,
     },
   });
 
