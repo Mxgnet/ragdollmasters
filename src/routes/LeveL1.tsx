@@ -2,33 +2,29 @@ import { ArenaOverlay } from "@/components/ArenaOverlay";
 import { Viewport } from "@/components/Viewport";
 import { GameContext } from "@/GameContext";
 import {
+  animateDeadFighter,
   createArenaFighter,
-  isFighterOutOfBounds,
   respawnArenaFighter,
   type Fighter,
 } from "@/lib/arena";
 import { useImpactHandler } from "@/lib/handleImpacts";
 import { moveBody } from "@/lib/moveBody";
 import { useBloodyParticules } from "@/lib/useBloodyParticules";
+import { useDeathDrops } from "@/lib/useDeathDrops";
 import {
   Composite,
   PlayerInput,
-  SurroundingWalls,
   useEventBeforeUpdate,
 } from "@1.framework/matter4react";
 import debug from "debug";
-import Matter, { Bounds, Vector } from "matter-js";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { Vector } from "matter-js";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export const log = debug("@:routes:LeveL1");
 
-const ARENA_SIZE = 6_000;
-const RESPAWN_DELAY_MS = 2_000;
 const BOT_MOVE_SPEED = 12;
-const WORLD_BOUNDS = Bounds.create([
-  { x: 0, y: 0 },
-  { x: ARENA_SIZE, y: ARENA_SIZE },
-]);
+const PLAYER_RESPAWN_MIN_DISTANCE = 900;
+const PLAYER_RESPAWN_RANDOM_DISTANCE = 1_200;
 const SPAWN_POINTS = [
   { x: 900, y: 900 },
   { x: 1_600, y: 1_250 },
@@ -41,14 +37,14 @@ const SPAWN_POINTS = [
 ];
 
 const FIGHTER_SEEDS = [
-  { color: "#f4f1de", id: "local", role: "local", spawn: SPAWN_POINTS[0], username: "you" },
-  { color: "#e07a5f", id: "bot-rift", role: "bot", spawn: SPAWN_POINTS[1], username: "rift" },
-  { color: "#81b29a", id: "bot-echo", role: "bot", spawn: SPAWN_POINTS[2], username: "echo" },
-  { color: "#f2cc8f", id: "bot-vex", role: "bot", spawn: SPAWN_POINTS[3], username: "vex" },
-  { color: "#9d4edd", id: "bot-mono", role: "bot", spawn: SPAWN_POINTS[4], username: "mono" },
-  { color: "#00bbf9", id: "bot-silt", role: "bot", spawn: SPAWN_POINTS[5], username: "silt" },
-  { color: "#ef476f", id: "bot-hex", role: "bot", spawn: SPAWN_POINTS[6], username: "hex" },
-  { color: "#06d6a0", id: "bot-drift", role: "bot", spawn: SPAWN_POINTS[7], username: "drift" },
+  { color: "#f4f1de", id: "local", role: "local", spawn: SPAWN_POINTS[0]!, username: "you" },
+  { color: "#e07a5f", id: "bot-rift", role: "bot", spawn: SPAWN_POINTS[1]!, username: "rift" },
+  { color: "#81b29a", id: "bot-echo", role: "bot", spawn: SPAWN_POINTS[2]!, username: "echo" },
+  { color: "#f2cc8f", id: "bot-vex", role: "bot", spawn: SPAWN_POINTS[3]!, username: "vex" },
+  { color: "#9d4edd", id: "bot-mono", role: "bot", spawn: SPAWN_POINTS[4]!, username: "mono" },
+  { color: "#00bbf9", id: "bot-silt", role: "bot", spawn: SPAWN_POINTS[5]!, username: "silt" },
+  { color: "#ef476f", id: "bot-hex", role: "bot", spawn: SPAWN_POINTS[6]!, username: "hex" },
+  { color: "#06d6a0", id: "bot-drift", role: "bot", spawn: SPAWN_POINTS[7]!, username: "drift" },
 ] as const;
 
 function spawnArenaFighters() {
@@ -65,6 +61,7 @@ export function LeveL1() {
   log("!");
   const { settings } = useContext(GameContext);
   const [fighters, setFighters] = useState<Fighter[]>([]);
+  const [showDeathScreen, setShowDeathScreen] = useState(false);
 
   useEffect(() => {
     setFighters(spawnArenaFighters());
@@ -86,12 +83,38 @@ export function LeveL1() {
     () => fighters.map((fighter) => fighter.composite),
     [fighters]
   );
+  const deathDrops = useDeathDrops(fighters, [fighters]);
   const onMove = useMemo(() => {
-    if (!localFighter) return () => {};
+    if (!localFighter?.alive) return () => {};
     return moveBody(localFighter.head, settings.speed);
   }, [localFighter, settings.speed]);
 
-  useImpactHandler(impactComposites, [impactComposites]);
+  const handleFighterKilled = useCallback((fighter: Fighter) => {
+    deathDrops.spawnDrops(fighter);
+    setFighters((current) => [...current]);
+
+    if (fighter.role === "local") {
+      setShowDeathScreen(true);
+    }
+  }, [deathDrops]);
+
+  const respawnLocalPlayer = useCallback(() => {
+    setFighters((current) => {
+      const player = current.find((fighter) => fighter.role === "local");
+      if (!player) {
+        return current;
+      }
+
+      player.spawn = getRandomRespawnPoint(player.head.position);
+      respawnArenaFighter(player);
+      return [...current];
+    });
+    setShowDeathScreen(false);
+  }, []);
+
+  useImpactHandler(fighters, [fighters, handleFighterKilled], {
+    onFighterKilled: handleFighterKilled,
+  });
   useBloodyParticules(impactComposites, [impactComposites]);
 
   useEventBeforeUpdate(
@@ -117,9 +140,10 @@ export function LeveL1() {
       const now = event.source.timing.timestamp;
 
       for (const fighter of fighters) {
-        if (fighter.alive && isFighterOutOfBounds(fighter, ARENA_SIZE, 900)) {
-          fighter.alive = false;
-          fighter.respawnAt = now + RESPAWN_DELAY_MS;
+        animateDeadFighter(fighter, now);
+
+        if (fighter.role === "local") {
+          continue;
         }
 
         if (!fighter.alive && fighter.respawnAt && now >= fighter.respawnAt) {
@@ -133,23 +157,45 @@ export function LeveL1() {
   return (
     <>
       <Viewport
-        extents={WORLD_BOUNDS}
-        followBody={localFighter?.head}
+        {...(localFighter ? { followBody: localFighter.head } : {})}
         protagonists={protagonists}
         viewHeight={1_000}
       />
       <PlayerInput map="gamepad" event="move" call={onMove} />
-      <SurroundingWalls
-        thick={ARENA_SIZE}
-        bounds={WORLD_BOUNDS}
-        options={{ render: { fillStyle: "#2b2d42" } }}
-      />
       {fighters.map((fighter) => (
         <Composite.add key={fighter.id} object={fighter.composite} />
       ))}
-      <ArenaOverlay fighters={fighters} worldSize={ARENA_SIZE} />
+      <ArenaOverlay fighters={fighters} />
+      {showDeathScreen && (
+        <div className="pointer-events-auto fixed inset-0 z-10 hstack justify-center bg-black/72 px-6 text-center text-white backdrop-blur-sm">
+          <div className="max-w-24rem rounded bg-black/70 px-6 py-7 shadow-2xl">
+            <p className="text-2.5rem uppercase tracking-0.14em">You Died</p>
+            <p className="mt-3 text-0.95rem text-white/72">
+              Respawn into the same fight at a new spot.
+            </p>
+            <button
+              className="mt-6 rounded bg-white px-5 py-3 text-0.9rem font-bold uppercase tracking-0.12em text-black"
+              type="button"
+              onClick={respawnLocalPlayer}
+            >
+              Respawn
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 export default LeveL1;
+
+function getRandomRespawnPoint(origin: Vector) {
+  const angle = Math.random() * Math.PI * 2;
+  const distance =
+    PLAYER_RESPAWN_MIN_DISTANCE + Math.random() * PLAYER_RESPAWN_RANDOM_DISTANCE;
+
+  return Vector.create(
+    origin.x + Math.cos(angle) * distance,
+    origin.y + Math.sin(angle) * distance
+  );
+}

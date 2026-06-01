@@ -3,7 +3,7 @@
 import { useEventCollisionStart } from "@1.framework/matter4react";
 import debug from "debug";
 import type { Composite, Engine, IEventCollision, Pair } from "matter-js";
-import { useRef, type DependencyList } from "react";
+import { useEffect, useRef, type DependencyList } from "react";
 
 //
 
@@ -23,6 +23,10 @@ export function useStickmanCollision(
 ) {
   log("!");
   const body_group_ref = useRef(new Map<number, number>());
+
+  useEffect(() => {
+    body_group_ref.current = new Map();
+  }, deps);
 
   useEventCollisionStart((event) => {
     const body_group = body_group_ref.current;

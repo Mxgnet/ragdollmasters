@@ -7,7 +7,7 @@ import {
   useEventBeforeUpdate,
 } from "@1.framework/matter4react";
 import debug from "debug";
-import { Body, Common, Composite, Vector } from "matter-js";
+import { Body, Common, Composite, Engine, Vector } from "matter-js";
 import { useRef, type DependencyList } from "react";
 import { isSaveBody } from "./isSaveBody";
 import { useStickmanCollision } from "./useStickmanCollision";
@@ -17,6 +17,9 @@ import { useStickmanCollision } from "./useStickmanCollision";
 export const log = debug("@:lib:useBloodyParticules");
 
 //
+
+const BLOOMS_PER_SAFE_IMPACT = 5;
+const MAX_ACTIVE_BLOOMS = 90;
 
 export function useBloodyParticules(
   composites: Composite[],
@@ -47,34 +50,42 @@ export function useBloodyParticules(
 
           lastSafeImpactAt.current.set(key, now);
 
-          const createdBlooms = Array.from({ length: 5 }, (_, index) => {
-            const angle = Common.random(0, Math.PI * 2);
-            const distance = Common.random(0, 10);
-            const drift = {
-              x: Math.cos(angle) * Common.random(18, 54),
-              y: Math.sin(angle) * Common.random(18, 54) - Common.random(4, 20),
-            };
+          const createdBlooms = Array.from(
+            { length: BLOOMS_PER_SAFE_IMPACT },
+            (_, index) => {
+              const angle = Common.random(0, Math.PI * 2);
+              const distance = Common.random(0, 10);
+              const drift = {
+                x: Math.cos(angle) * Common.random(18, 54),
+                y: Math.sin(angle) * Common.random(18, 54) - Common.random(4, 20),
+              };
 
-            return new ImpactBloom(
-              contact.x + Math.cos(angle) * distance,
-              contact.y + Math.sin(angle) * distance,
-              Common.random(7, index === 0 ? 18 : 14),
-              {
-                drift,
-                growth: Common.random(1.3, 2.1),
-                hueOffset: Common.random(-10, 18),
-                lifetime: Common.random(0.2, 0.42),
-                maxOpacity: index === 0 ? 0.32 : Common.random(0.12, 0.24),
-              }
-            );
-          });
+              return new ImpactBloom(
+                contact.x + Math.cos(angle) * distance,
+                contact.y + Math.sin(angle) * distance,
+                Common.random(7, index === 0 ? 18 : 14),
+                {
+                  drift,
+                  growth: Common.random(1.3, 2.1),
+                  hueOffset: Common.random(-10, 18),
+                  lifetime: Common.random(1.1, 1.8),
+                  maxOpacity: index === 0 ? 0.32 : Common.random(0.12, 0.24),
+                }
+              );
+            }
+          );
 
-          blooms.current = [...createdBlooms, ...blooms.current].map((bloom) => {
+          const nextBlooms = [...createdBlooms, ...blooms.current].map((bloom) => {
             if (!event.source.world.bodies.includes(bloom.body)) {
               Composite.add(event.source.world, bloom.body);
             }
             return bloom;
           });
+
+          blooms.current = nextBlooms.slice(0, MAX_ACTIVE_BLOOMS);
+          for (const bloom of nextBlooms.slice(MAX_ACTIVE_BLOOMS)) {
+            Composite.remove(event.source.world, bloom.body);
+          }
           return;
         }
 
@@ -128,8 +139,9 @@ export function useBloodyParticules(
   useEngineEvent(
     "afterUpdate",
     (event) => {
+      const engine = event.source as Engine;
       for (const p of dead_particules.current) {
-        Composite.remove(event.source.world, p.body);
+        Composite.remove(engine.world, p.body);
       }
     },
     deps

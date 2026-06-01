@@ -11,6 +11,7 @@ const spriteRender = {
 export class ImpactBloom {
   body: Body;
   life = 1;
+  private scale = 1;
 
   readonly initialRadius: number;
   readonly growth: number;
@@ -34,7 +35,7 @@ export class ImpactBloom {
     this.initialRadius = radius;
     this.growth = options?.growth ?? 1.8;
     this.hueOffset = options?.hueOffset ?? 0;
-    this.lifetime = options?.lifetime ?? 0.38;
+    this.lifetime = options?.lifetime ?? 1.4;
     this.maxOpacity = options?.maxOpacity ?? 0.28;
     this.drift = options?.drift ?? { x: 0, y: 0 };
 
@@ -64,9 +65,10 @@ export class ImpactBloom {
     );
     Body.scale(
       this.body,
-      nextScale / this.body.scale.x,
-      nextScale / this.body.scale.y
+      nextScale / this.scale,
+      nextScale / this.scale
     );
+    this.scale = nextScale;
     this.body.render.opacity = this.maxOpacity * fade;
     this.body.render.fillStyle = this.colorAt(nextLife);
   }
